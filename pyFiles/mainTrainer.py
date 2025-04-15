@@ -4,6 +4,8 @@ import world as w
 import pygameFunctions as pf
 import colony as cn
 import extraFunctions as ef
+import agent as a
+import models as m
 
 #Initialize pygame
 if c.VISUALS:
@@ -35,47 +37,62 @@ else:
     foodImage = None
 
 #Create initial objects.
-#Map
-map = []
-for x in range(c.WIDTH):
-    row = []
-    for y in range(c.HEIGHT):
-        row.append([])
-    map.append(row)
+#AI
+antModel = m.AntModel(c.ANT_INPUT_SIZE, c.ANT_OUTPUT_SIZE, c.ANT_HIDDEN_LAYERS, c.ANT_HIDDEN_NEURONES)
+colModel = m.AntModel(c.COL_INPUT_SIZE, c.COL_OUTPUT_SIZE, c.COL_HIDDEN_LAYERS, c.COL_HIDDEN_NEURONES)
+antTrainer = m.Trainer(antModel, "ant")
+colTrainer = m.Trainer(colModel, "colony")
+colAgent = a.Agent(colModel, "colony", colTrainer)
+antAgent = a.Agent(antModel, "ant", antTrainer)
 
-world = w.World(bgImage)
-colonyRed = cn.Colony(colonyRedImage, [c.RED_COLONY_X, c.RED_COLONY_Y], workerRedImage, soldierRedImage, foodImage, "red")
-colonyBlue = cn.Colony(colonyBlueImage, [c.BLUE_COLONY_X, c.BLUE_COLONY_Y], workerBlueImage, soldierBlueImage, foodImage, "blue")
-colonyRed.enemy = colonyBlue
-colonyBlue.enemy = colonyRed
-map[c.RED_COLONY_X][c.RED_COLONY_Y].append(colonyRed)
-map[c.BLUE_COLONY_X][c.BLUE_COLONY_Y].append(colonyBlue)
-#############################
-######## GAME LOOP ##########
-#############################
+for i in range(c.TOTAL_EPOCHS):
+    #Map
+    map = []
+    for x in range(c.WIDTH):
+        row = []
+        for y in range(c.HEIGHT):
+            row.append([])
+        map.append(row)
 
-run = True
-while run:
-    #Pygame content (optional)
-    if c.VISUALS:
-        #Ensure standard FPS
-        clock.tick(c.FPS)
-        #Handle all rendering
-        world.draw(WIN)
-        pf.drawAll(map, WIN)
-        #Check pygame quit
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                run = False
-        pygame.display.flip()
-    #Content
-    map = ef.turn(map, foodImage)
-    
+    world = w.World(bgImage)
+    colonyRed = cn.Colony(colonyRedImage, [c.RED_COLONY_X, c.RED_COLONY_Y], workerRedImage, soldierRedImage, foodImage, "red", colAgent, antAgent)
+    colonyBlue = cn.Colony(colonyBlueImage, [c.BLUE_COLONY_X, c.BLUE_COLONY_Y], workerBlueImage, soldierBlueImage, foodImage, "blue", colAgent, antAgent)
+    colonyRed.enemy = colonyBlue
+    colonyBlue.enemy = colonyRed
+    map[c.RED_COLONY_X][c.RED_COLONY_Y].append(colonyRed)
+    map[c.BLUE_COLONY_X][c.BLUE_COLONY_Y].append(colonyBlue)
+    #############################
+    ######## GAME LOOP ##########
+    #############################
+
+    run = True
+    turns = 0
+    while run:
+        #Pygame content (optional)
+        if c.VISUALS:
+            #Ensure standard FPS
+            clock.tick(c.FPS)
+            #Handle all rendering
+            world.draw(WIN)
+            pf.drawAll(map, WIN)
+            #Check pygame quit
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    run = False
+            pygame.display.flip()
+        #Content
+        map = ef.turn(map, foodImage, turns>=c.MAX_TURNS)
+        turns += 1
+        if turns >= c.MAX_TURNS or (colonyRed not in map[c.RED_COLONY_X][c.RED_COLONY_Y] and colonyBlue not in map[c.BLUE_COLONY_X][c.BLUE_COLONY_Y]):
+            run = False
+            antAgent.trainGame()
+            colAgent.trainGame()
+        
 
 
-##############################
-######### END ################
-##############################
+    ##############################
+    ######### END ################
+    ##############################
 
 if c.VISUALS:
     pygame.quit()

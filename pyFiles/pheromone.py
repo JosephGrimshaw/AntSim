@@ -16,7 +16,7 @@ class Pheromone():
         else:
             self.duration = c.ANT_PHEROMONE_DURATION
     
-    def takeTurn(self, map):
+    def takeTurn(self, map, done):
         self.duration -= 1
         if self.duration <= 0:
             return True, None

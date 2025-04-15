@@ -10,7 +10,7 @@ class Food():
     def draw(self, WIN):
         WIN.blit(self.img, (int((self.pos[0]/c.SQUARE_LENGTH)*c.WIDTH), int((self.pos[1]/c.SQUARE_LENGTH)*c.HEIGHT)))
     
-    def takeTurn(self, map):
+    def takeTurn(self, map, done):
         if self.value <= 0:
             return True, []
         if (any(entity.type == "colony" for entity in map[self.pos[0]][self.pos[1]])):

@@ -1,28 +1,33 @@
 import extraFunctions as ef
 import ant
-import random
 import consts as c
 import pheromone as p
 
 class Colony():
-    def __init__(self, img, pos, workerImg, soldierImg, foodImg, colour):
+    def __init__(self, img, pos, workerImg, soldierImg, foodImg, colour, agent, antAgent):
         self.img = img
         self.pos = pos
         self.colour = colour
+        self.agent = agent
+        self.antAgent = antAgent
+        self.lastState = None
+        self.lastAction = None
         self.ants = {"soldier": [],
                      "worker": []}
         self.larvae = {"soldier": [],
                        "worker": []}
         self.foodImg = foodImg
+        self.foodStored = 0
         self.hunger = c.COLONY_HUNGER
+        self.foodValue = c.COLONY_HP
         self.hp = c.COLONY_HP
         self.workerImg = workerImg
         self.soldierImg = soldierImg
         self.type = "colony"
         self.enemy = None
         self.allMoves = ["makeWorker", "makeSoldier", "skip"]
-        for i in range(c.ANT_PHEROMONES, c.QUEEN_PHEROMONES):
-            self.allMoves.append(["layPheromone", i])
+        for i in range(c.QUEEN_PHEROMONES):
+            self.allMoves.append(f"layPheromone{i}")
 
     def draw(self, WIN):
         WIN.blit(self.img, (ef.squareToPixel(self.pos[0]), ef.squareToPixel(self.pos[1])))
@@ -37,7 +42,7 @@ class Colony():
 
         for idx in range(len(self.larvae["worker"])):
             if self.larvae["worker"][idx] == 0:
-                newAnt = ant.Ant(self.workerImg, [self.pos[0], self.pos[1]], self, "worker", self.foodImg)
+                newAnt = ant.Ant(self.workerImg, [self.pos[0], self.pos[1]], self, "worker", self.foodImg, self.antAgent)
                 self.ants["worker"].append(newAnt)
                 newAnts.append(newAnt)
                 newWorkers += 1
@@ -47,7 +52,7 @@ class Colony():
 
         for idx in range(len(self.larvae["soldier"])):
                 if self.larvae["soldier"][idx] == 0:
-                    newAnt = ant.Ant(self.soldierImg, [self.pos[0], self.pos[1]], self, "soldier", self.foodImg)
+                    newAnt = ant.Ant(self.soldierImg, [self.pos[0], self.pos[1]], self, "soldier", self.foodImg, self.antAgent)
                     self.ants["soldier"].append(newAnt)
                     newAnts.append(newAnt)
                     newSoldiers += 1
@@ -58,16 +63,37 @@ class Colony():
         self.larvae["worker"] = self.larvae["worker"][newWorkers:]
         
         return newAnts
-            
     
-    def takeTurn(self, map):
+    def updateFoodStored(self, square):
+        foodStored = self.foodStored
+        for entity in square:
+            if entity.type == "food":
+                if foodStored != entity.value:
+                    self.foodStored = entity.value
+                    self.foodValue += entity.value - foodStored
+                return
+    
+    def takeTurn(self, map, done):
+        newState = self.agent.getState(map, self)
+        reward = self.agent.getReward(self)
+        if self.lastAction != None:
+            self.agent.trainTurn(self.lastState, self.allMoves.index(self.lastAction), reward, newState, done)
+            self.agent.record(self.lastState, self.allMoves.index(self.lastAction), reward, newState, done)
+        self.lastState = newState
+        self.updateFoodStored(map[self.pos[0]][self.pos[1]])
         if self.hunger < c.COLONY_HP_DEGRADE_THRESHOLD_HUNGER:
             self.hp -= c.COLONY_HP_DEGRADE_HUNGER
+        if self.hunger > c.COLONY_HP_HEAL_THRESHOLD_HUNGER:
+            if self.hp + c.COLONY_HP_HEAL_HUNGER <= c.COLONY_HP:
+                self.hp += c.COLONY_HP_HEAL_HUNGER
+                self.foodValue += c.COLONY_HP_HEAL_HUNGER
         self.hunger -= c.COLONY_HUNGER_DEGRADE + len(self.larvae["worker"]) + len(self.larvae["soldier"])
         if self.hunger <= 0 or self.hp <= 0:
-            self.enemy.enemy = None
+            if self.enemy:
+                self.enemy.enemy = None
             return True, []
-        newMove = random.choice(self.allMoves)
+        newMove = self.agent.getAction(newState, self)
+        self.lastAction = newMove
         newObjs = self.handleLarvae()
         match newMove:
             case "makeWorker":
@@ -82,8 +108,10 @@ class Colony():
                 self.eat(any(entity.type == "food" for entity in map[self.pos[0]][self.pos[1]]))
             case "skip":
                 pass
-            case _:
-                newObjs.append(self.layPheromone(newMove[1]))
+            case _ if newMove.startswith("layPheromone"):
+                idx = newMove.split("layPheromone")[1]
+                idx = int(idx)
+                newObjs.append(self.layPheromone(idx))
         return False, newObjs
     
     def eat(self, foodObjs):
@@ -104,4 +132,4 @@ class Colony():
 
     def layPheromone(self, type):
         newPheromone = p.Pheromone(type, [self.pos[0], self.pos[1]], self.colour)
-        return [newPheromone]
+        return newPheromone

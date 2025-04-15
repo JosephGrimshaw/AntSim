@@ -3,20 +3,25 @@ import random
 import consts as c
 import food as f
 import pheromone as p
+import copy
 
 class Ant():
-    def __init__(self, img, pos, col, caste, foodImg):
+    def __init__(self, img, pos, col, caste, foodImg, agent):
         self.img = img
         self.pos = pos
         self.col = col
         self.foodImg = foodImg
         self.type = "ant"
         self.caste = caste
+        self.agent = agent
+        self.lastState = None
+        self.lastAction = None
         self.hunger = c.ANT_HUNGER
         self.heldFood = 0
         self.allMoves = ["left", "right", "up", "down", "pickUpFood", "eatFood", "dropFood", "attackAnt", "attackColony", "skip"]
         for i in range(c.ANT_PHEROMONES):
-            self.allMoves.append(["layPheromone", i])
+            self.allMoves.append(f"layPheromone{i}")
+        print(f"Ant allMoves length: {len(self.allMoves)}")
         if caste == "worker":
             self.dmg = c.WORKER_DMG
             self.hp = c.WORKER_HP
@@ -27,9 +32,18 @@ class Ant():
     def draw(self, WIN):
         WIN.blit(self.img, (ef.squareToPixel(self.pos[0]), ef.squareToPixel(self.pos[1])))
 
-    def takeTurn(self, map):
+    def takeTurn(self, map, done):
+        newState = self.agent.getState(map, self)
+        reward = self.agent.getReward(self)
+        if self.lastAction != None:
+            self.agent.trainTurn(self.lastState, self.allMoves.index(self.lastAction), reward, newState, done)
+            self.agent.record(self.lastState, self.allMoves.index(self.lastAction), reward, newState, done)
+        self.lastState = copy.deepcopy(newState)
         if self.hunger <= c.ANT_HP_DEGRADE_THRESHOLD_HUNGER:
             self.hp -= c.ANT_HP_DEGRADE_HUNGER
+        if self.hunger >= c.ANT_HP_HEAL_THRESHOLD_HUNGER[self.caste]:
+            if self.hp + c.ANT_HP_HEAL_HUNGER[self.caste] <= c.ANT_HP[self.caste]:
+                self.hp += c.ANT_HP_HEAL_HUNGER[self.caste]
         self.hunger -= c.ANT_HUNGER_DEGRADE
         if self.hp <= 0 or self.hunger <= 0:
             if self in self.col.ants[self.caste]:
@@ -39,7 +53,8 @@ class Ant():
             #Delete self
             foodObj = f.Food(self.foodImg, c.DEAD_FOODS[self.caste], [self.pos[0], self.pos[1]])
             return True, [foodObj]
-        newMove = random.choice(self.allMoves)
+        newMove = self.agent.getAction(newState, self)
+        self.lastAction = newMove
         match newMove:
             case "left":
                 return True, self.move("left")
@@ -65,8 +80,10 @@ class Ant():
                 return False, None
             case "skip":
                 return False, None
-            case _:
-                return False, self.layPheromone(newMove[1])
+            case _ if newMove.startswith("layPheromone"):
+                idx = newMove.split("layPheromone")[1]
+                idx = int(idx)
+                return False, self.layPheromone(idx)
     
     def pickUpFood(self, map):
         for entity in map[self.pos[0]][self.pos[1]]:

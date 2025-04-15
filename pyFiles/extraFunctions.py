@@ -10,26 +10,26 @@ def squareToPixel(square):
 ######### IMPORTANT #########################
 #############################################
 
-def turn(map, foodImg):
+def turn(map, foodImg, done):
     changes = {
         "add": [],
         "remove": []
     }
-    map = bundleGameTurn(map, changes, foodImg)
+    map = bundleGameTurn(map, changes, foodImg, done)
     return map
 
-def bundleGameTurn(map, changes, foodImg):
+def bundleGameTurn(map, changes, foodImg, done):
     changes = handleFood(map, changes, foodImg)       
-    changes = handleMap(map, changes)
+    changes = handleMap(map, changes, done)
     map = changesEffector(map, changes)
     return map
 
-def handleMap(map, changes):
+def handleMap(map, changes, done):
     for row in map:
         for square in row:
             for entity in square[:]:
                 oldPos = entity.pos[:]
-                delete, new = entity.takeTurn(map)
+                delete, new = entity.takeTurn(map, done)
                 if new:
                     for newEntity in new:
                         changes["add"].append([newEntity, newEntity.pos])
@@ -40,7 +40,7 @@ def handleMap(map, changes):
 def changesEffector(map, changes):
     for change in changes["add"]:
         map[change[1][0]][change[1][1]].append(change[0])
-    for change in changes["remove"]:
+    for change in changes["remove"]:        
         map[change[1][0]][change[1][1]].remove(change[0])
     return map
 

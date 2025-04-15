@@ -21,3 +21,13 @@ Project Log
 
     Remember:
         Sort states and rest of AI tomorrow!
+
+15/04/2025 - Day 3
+
+    Andaman night! Hell yeah!
+    Pushed yesterday to github. Finished all AI implementation, ie finished agent including rewards, states, actions etc, built the models and a trainer using Q-learning algorithm and fixed some other things that I had missed, such as edge boundary complications. Basically, all AI functionality implemented, all now needed is to fine-tune the values for the training process.
+
+    Issues:
+        Upon initial test, my fears were confirmed. The colony quickly learns just not to produce ants because they start so stupid. Tomorrow try making a gym for the ants, or simply initially setting the colony to be random and not die to encourage it to not just stop ant production. Save ant models when they are a bit smarter then introduce colony learning as well. Another thought-of issue is that the same relative reward is given for most actions - possibly change reward function to be more accurate, eg rewarding ant hp and other directly-tied things that will actually change each turn for each ant.
+
+    Cya!
