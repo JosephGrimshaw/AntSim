@@ -41,6 +41,8 @@ def getAntState(map, ant):
     state.append(ant.pos[1]/c.SQUARE_LENGTH)
     state.append(ant.col.pos[0]/c.SQUARE_LENGTH)
     state.append(ant.col.pos[1]/c.SQUARE_LENGTH)
+    state.append(ant.heldFood/c.MAX_HELD_FOOD[ant.caste])
+    state.append(0 if ant.caste == "worker" else 1)
     #DECIDE WHETHER TO INCLUDE ENEMY COLONY INFO
     state.append(ant.col.enemy.pos[0]/c.SQUARE_LENGTH if ant.col.enemy else -1)
     state.append(ant.col.enemy.pos[1]/c.SQUARE_LENGTH if ant.col.enemy else -1)
@@ -121,6 +123,7 @@ def getColonyState(map, colony):
     state.append(len(colony.larvae["soldier"]))
     state.append(len(colony.ants["worker"]))
     state.append(len(colony.ants["soldier"]))
+    state.append(colony.heldFood)
     for x in range(colony.pos[0]-1, colony.pos[0]+2):
         for y in range(colony.pos[1]-1, colony.pos[1]+2):
             friendlyWorkers = 0
@@ -162,14 +165,15 @@ def getAntReward(ant):
     reward = 0
     #reward += ant.hp/c.ANT_HP[ant.caste]
     #reward += ant.hunger/c.ANT_HUNGER
-    reward += min(ant.col.foodValue, c.MAX_ANT_FOOD_REWARD)
-    reward += (ant.col.hp/c.COLONY_HP)*c.ANT_COL_HP_REWARD_MULTIPLIER
+    reward += min(ant.col.foodValue - ant.col.lastFoodValue, c.MAX_ANT_FOOD_REWARD)*1000
+    reward += ((ant.col.hp - ant.col.lastHP)/c.COLONY_HP)*c.ANT_COL_HP_REWARD_MULTIPLIER #MAKE INFO CARRY FROM LAST TURN SO DIFFERENCE IS MEASURED NOT ABSOLUTE HP ETC
+    reward += ((ant.hp-ant.lastHP)/c.ANT_HP[ant.caste])*100
     #reward += colony time alive
     return reward
 
 def getColReward(colony):
     reward = 0
-    reward += min(colony.foodValue, c.MAX_COL_FOOD_REWARD)
-    reward += (colony.hp/c.COLONY_HP)*c.COL_HP_REWARD_MULTIPLIER
+    reward += min(colony.foodValue - colony.lastFoodValue, c.MAX_COL_FOOD_REWARD)*1000
+    reward += ((colony.hp-colony.lastHP)/c.COLONY_HP)*c.COL_HP_REWARD_MULTIPLIER
     #reward += time alive
     return reward

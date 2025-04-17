@@ -6,6 +6,8 @@ import colony as cn
 import extraFunctions as ef
 import agent as a
 import models as m
+import os
+import torch
 
 #Initialize pygame
 if c.VISUALS:
@@ -39,10 +41,14 @@ else:
 #Create initial objects.
 #AI
 antModel = m.AntModel(c.ANT_INPUT_SIZE, c.ANT_OUTPUT_SIZE, c.ANT_HIDDEN_LAYERS, c.ANT_HIDDEN_NEURONES)
-colModel = m.AntModel(c.COL_INPUT_SIZE, c.COL_OUTPUT_SIZE, c.COL_HIDDEN_LAYERS, c.COL_HIDDEN_NEURONES)
+#colModel = m.AntModel(c.COL_INPUT_SIZE, c.COL_OUTPUT_SIZE, c.COL_HIDDEN_LAYERS, c.COL_HIDDEN_NEURONES)
+if os.path.exists("./models/antModel.pt"):
+    antModel.load_state_dict(torch.load("./models/antModel.pt"))
+#if os.path.exists("colModel.pt"):
+    #colModel.load_state_dict(torch.load("colModel.pt"))
 antTrainer = m.Trainer(antModel, "ant")
-colTrainer = m.Trainer(colModel, "colony")
-colAgent = a.Agent(colModel, "colony", colTrainer)
+#colTrainer = m.Trainer(colModel, "colony")
+#colAgent = a.Agent(colModel, "colony", colTrainer)
 antAgent = a.Agent(antModel, "ant", antTrainer)
 
 for i in range(c.TOTAL_EPOCHS):
@@ -55,8 +61,8 @@ for i in range(c.TOTAL_EPOCHS):
         map.append(row)
 
     world = w.World(bgImage)
-    colonyRed = cn.Colony(colonyRedImage, [c.RED_COLONY_X, c.RED_COLONY_Y], workerRedImage, soldierRedImage, foodImage, "red", colAgent, antAgent)
-    colonyBlue = cn.Colony(colonyBlueImage, [c.BLUE_COLONY_X, c.BLUE_COLONY_Y], workerBlueImage, soldierBlueImage, foodImage, "blue", colAgent, antAgent)
+    colonyRed = cn.Colony(colonyRedImage, [c.RED_COLONY_X, c.RED_COLONY_Y], workerRedImage, soldierRedImage, foodImage, "red", "colAgent", antAgent)
+    colonyBlue = cn.Colony(colonyBlueImage, [c.BLUE_COLONY_X, c.BLUE_COLONY_Y], workerBlueImage, soldierBlueImage, foodImage, "blue", "colAgent", antAgent)
     colonyRed.enemy = colonyBlue
     colonyBlue.enemy = colonyRed
     map[c.RED_COLONY_X][c.RED_COLONY_Y].append(colonyRed)
@@ -79,6 +85,9 @@ for i in range(c.TOTAL_EPOCHS):
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     run = False
+                    if c.VISUALS:
+                        antModel.save("antModel.pt")
+                        pygame.quit()
             pygame.display.flip()
         #Content
         map = ef.turn(map, foodImage, turns>=c.MAX_TURNS)
@@ -86,13 +95,12 @@ for i in range(c.TOTAL_EPOCHS):
         if turns >= c.MAX_TURNS or (colonyRed not in map[c.RED_COLONY_X][c.RED_COLONY_Y] and colonyBlue not in map[c.BLUE_COLONY_X][c.BLUE_COLONY_Y]):
             run = False
             antAgent.trainGame()
-            colAgent.trainGame()
+            #colAgent.trainGame()
         
 
 
     ##############################
     ######### END ################
     ##############################
-
-if c.VISUALS:
-    pygame.quit()
+antModel.save("antModel.pt")
+#colModel.save("colModel.pt")

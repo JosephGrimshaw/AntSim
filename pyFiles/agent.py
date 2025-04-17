@@ -40,19 +40,15 @@ class Agent():
             sample = self.memory
         states, actions, rewards, nextStates, dones = zip(*sample)
         self.trainer.train(states, actions, rewards, nextStates, dones)
+        if self.epochs % c.SAVE_INTERVAL == 0:
+            torch.save(self.model.state_dict(), f=f"models/{self.organism}Model.pt")
     
     def getAction(self, state, entity):
-        self.epsilon = c.INITIAL_EPSILON[self.organism] - self.epochs * c.EPSILON_DECAY[self.organism]
+        self.epsilon = max(c.INITIAL_EPSILON[self.organism] - self.epochs * c.EPSILON_DECAY[self.organism], c.MIN_EPSILON[self.organism])
         if random.randint(0, 200) < self.epsilon:
             action = random.choice(entity.allMoves)
         else:
             state1 = torch.tensor(state, dtype=torch.float).unsqueeze(0)  # Add batch dimension
             action_index = self.model(state1).argmax().item()
-
-            # Ensure the index is within bounds
-            if action_index >= len(entity.allMoves):
-                print(f"Invalid action index: {action_index} for allMoves length: {len(entity.allMoves)}")
-                action_index = 0  # Default to a valid action
-
             action = entity.allMoves[action_index]
         return action

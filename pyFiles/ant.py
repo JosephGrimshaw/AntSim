@@ -14,6 +14,8 @@ class Ant():
         self.type = "ant"
         self.caste = caste
         self.agent = agent
+        self.lastHP = c.ANT_HP[caste]
+        self.lastHunger = c.ANT_HUNGER
         self.lastState = None
         self.lastAction = None
         self.hunger = c.ANT_HUNGER
@@ -21,7 +23,6 @@ class Ant():
         self.allMoves = ["left", "right", "up", "down", "pickUpFood", "eatFood", "dropFood", "attackAnt", "attackColony", "skip"]
         for i in range(c.ANT_PHEROMONES):
             self.allMoves.append(f"layPheromone{i}")
-        print(f"Ant allMoves length: {len(self.allMoves)}")
         if caste == "worker":
             self.dmg = c.WORKER_DMG
             self.hp = c.WORKER_HP
@@ -48,13 +49,13 @@ class Ant():
         if self.hp <= 0 or self.hunger <= 0:
             if self in self.col.ants[self.caste]:
                 self.col.ants[self.caste].remove(self)
-            else:
-                pass
             #Delete self
             foodObj = f.Food(self.foodImg, c.DEAD_FOODS[self.caste], [self.pos[0], self.pos[1]])
             return True, [foodObj]
         newMove = self.agent.getAction(newState, self)
         self.lastAction = newMove
+        self.lastHP = self.hp
+        self.lastHunger = self.hunger
         match newMove:
             case "left":
                 return True, self.move("left")
@@ -112,6 +113,8 @@ class Ant():
         eating = min(emptyHunger, self.heldFood)
         self.heldFood -= eating
         self.hunger += eating
+        if eating:
+            print("Ant ate food!")
 
 
     def move(self, dir):
