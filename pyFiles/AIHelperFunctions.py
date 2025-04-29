@@ -1,6 +1,22 @@
 import consts as c
+import numpy as np
 
-def getAntState(map, ant):
+def getAntGlobalState(ant):
+    state = []
+    state.append(ant.hp/c.ANT_HP[ant.caste])
+    state.append(ant.hunger/c.ANT_HUNGER)
+    '''
+    state.append(ant.pos[0]/c.SQUARE_LENGTH)
+    state.append(ant.pos[1]/c.SQUARE_LENGTH)
+    state.append(ant.col.pos[0]/c.SQUARE_LENGTH)
+    state.append(ant.col.pos[1]/c.SQUARE_LENGTH)
+    '''
+    state.append(ant.col.pos[0]-ant.pos[0])
+    state.append(ant.col.pos[1]-ant.pos[1])
+    state.append(ant.heldFood/c.MAX_HELD_FOOD[ant.caste])
+    state.append(0 if ant.caste == "worker" else 1)
+    return state
+def getAntGridState(map, ant):
     #Very complicated D,:
     #In future, po
     '''
@@ -34,66 +50,43 @@ def getAntState(map, ant):
     12. TL Friendly Pheromone
     13. TL Enemy Pheromone
     '''
-    state = []
-    state.append(ant.hp/c.ANT_HP[ant.caste])
-    state.append(ant.hunger/c.ANT_HUNGER)
-    state.append(ant.pos[0]/c.SQUARE_LENGTH)
-    state.append(ant.pos[1]/c.SQUARE_LENGTH)
-    state.append(ant.col.pos[0]/c.SQUARE_LENGTH)
-    state.append(ant.col.pos[1]/c.SQUARE_LENGTH)
-    state.append(ant.heldFood/c.MAX_HELD_FOOD[ant.caste])
-    state.append(0 if ant.caste == "worker" else 1)
+    state = np.zeros((8, 3, 3))
     #DECIDE WHETHER TO INCLUDE ENEMY COLONY INFO
-    state.append(ant.col.enemy.pos[0]/c.SQUARE_LENGTH if ant.col.enemy else -1)
-    state.append(ant.col.enemy.pos[1]/c.SQUARE_LENGTH if ant.col.enemy else -1)
+        #state.append(ant.col.enemy.pos[0]/c.SQUARE_LENGTH if ant.col.enemy else -1)
+        #state.append(ant.col.enemy.pos[1]/c.SQUARE_LENGTH if ant.col.enemy else -1)
     #ENEMY COLONY POS INFO IF SEEN
-    for x in range(ant.pos[0]-1, ant.pos[0]+2):
-        for y in range(ant.pos[1]-1, ant.pos[1]+2):
+    for x in range(-1, 2):
+        for y in range(-1, 2):
+            stateX = x + 1
+            stateY = y + 1
+            mapX = ant.pos[0] + x
+            mapY = ant.pos[1] + y
             if x < 0 or x >= c.WIDTH or y < 0 or y >= c.HEIGHT:
-                valid = 0
-                friendlyWorkers = 0
-                friendlySoldiers = 0
-                enemyWorkers = 0
-                enemySoldiers = 0
-                foodValue = 0
-                friendlyPheromoneType = -1
-                enemyPheromoneType = -1
+                state[6, stateX, stateY] = -1 #Friendly Pheromone
+                state[7, stateX, stateY] = -1 #Enemy Pheromone
             else:
-                valid = 1
-                friendlyWorkers = 0
-                friendlySoldiers = 0
-                enemyWorkers = 0
-                enemySoldiers = 0
-                foodValue = 0
-                friendlyPheromoneType = -1
-                enemyPheromoneType = -1
-                for entity in map[x][y]:
+                state[0, stateX, stateY] = 1 #Valid
+                state[6, stateX, stateY] = -1 #Friendly Pheromone
+                state[7, stateX, stateY] = -1 #Enemy Pheromone
+                for entity in map[mapX][mapY]:
                     if entity.type == "ant":
                         if entity.caste == "worker":
                             if entity.col == ant.col:
-                                friendlyWorkers += 1
+                                state[1, stateX, stateY] += 1 #Friendly Workers
                             else:
-                                enemyWorkers += 1
+                                state[2, stateX, stateY] += 1 #Enemy Workers
                         else:
                             if entity.col == ant.col:
-                                friendlySoldiers += 1
+                                state[3, stateX, stateY] += 1 #Friendly Soldiers
                             else:
-                                enemySoldiers += 1
+                                state[4, stateX, stateY] += 1 #Enemy Soldiers
                     elif entity.type == "food":
-                        foodValue = entity.value
+                        state[5, stateX, stateY] = entity.value #Food Value
                     elif entity.type == "pheromone":
                         if entity.col == ant.col.colour:
-                            friendlyPheromoneType = entity.designation
+                            state[6, stateX, stateY] = entity.designation #Friendly Pheromone
                         else:
-                            enemyPheromoneType = entity.designation
-            state.append(valid)
-            state.append(foodValue)
-            state.append(friendlyWorkers)
-            state.append(friendlySoldiers)
-            state.append(enemyWorkers)
-            state.append(enemySoldiers)
-            state.append(friendlyPheromoneType)
-            state.append(enemyPheromoneType)
+                            state[7, stateX, stateY] = entity.designation #Enemy Pheromone
     return state
 
 def getColonyState(map, colony):
@@ -161,19 +154,31 @@ def getColonyState(map, colony):
             state.append(enemyPheromoneType)
     return state
 
-def getAntReward(ant):
+def getAntReward(ant, done):
     reward = 0
     #reward += ant.hp/c.ANT_HP[ant.caste]
     #reward += ant.hunger/c.ANT_HUNGER
-    reward += min(ant.col.foodValue - ant.col.lastFoodValue, c.MAX_ANT_FOOD_REWARD)*1000
-    reward += ((ant.col.hp - ant.col.lastHP)/c.COLONY_HP)*c.ANT_COL_HP_REWARD_MULTIPLIER #MAKE INFO CARRY FROM LAST TURN SO DIFFERENCE IS MEASURED NOT ABSOLUTE HP ETC
-    reward += ((ant.hp-ant.lastHP)/c.ANT_HP[ant.caste])*100
+    reward += min(ant.col.foodValue - ant.col.lastFoodValue, c.MAX_ANT_FOOD_REWARD)
+    reward += ((ant.col.hp - ant.col.lastHP)/c.COLONY_HP) #*c.ANT_COL_HP_REWARD_MULTIPLIER #MAKE INFO CARRY FROM LAST TURN SO DIFFERENCE IS MEASURED NOT ABSOLUTE HP ETC
+    reward += ((ant.hp-ant.lastHP)/c.ANT_HP[ant.caste])
+    if done:
+        reward += ant.col.turns*100
+        if ant.col and ant.col.hp > 0:
+            reward += 1000
+        else:
+            reward -= 1000
     #reward += colony time alive
     return reward
 
-def getColReward(colony):
+def getColReward(colony, done):
     reward = 0
-    reward += min(colony.foodValue - colony.lastFoodValue, c.MAX_COL_FOOD_REWARD)*1000
-    reward += ((colony.hp-colony.lastHP)/c.COLONY_HP)*c.COL_HP_REWARD_MULTIPLIER
+    reward += min(colony.foodValue - colony.lastFoodValue, c.MAX_COL_FOOD_REWARD)
+    reward += ((colony.hp-colony.lastHP)/c.COLONY_HP) #*c.COL_HP_REWARD_MULTIPLIER
+    if done:
+        reward += colony.turns*100
+        if colony.hp > 0:
+            reward += 100000
+        else:
+            reward -= 100000
     #reward += time alive
     return reward

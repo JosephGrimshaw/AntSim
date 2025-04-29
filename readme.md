@@ -37,3 +37,31 @@ Project Log
     Initially very stupid. Tried training only ants and maintaining the colony as random first. Will probably follow this approach, and introduce colony AI once the ants are smarter. Made some fixes to the reward function, including adding caste and food held. Bug where I had not added eating to the colony's action list, so fixed that. During training of ants, massively raised colony hp to try to allow ants to discover more. Fiddled with numbers in general to attempt to make progress in training. Ants still very stupid but begin to exhibit some slight indicators of actual behaviour. I'll have to see if anything gets better by tomorrow. Made ant more complicate (20 layers) network as discovered that size is normal for RL.
 
     Ideas: For visual representation, maybe draw bar chart of the portion of actions that are taken by ants/colonies? ie What percentage of actions are move, what are pheromones (or each pheromone), what percentage are attack ants, what percentage are eat foods etc. Also, introduce some kind of overall, long-term reward for win/loss if possible throughout long memory. Also, change epsilon so ant remains very random by introducing a minimum epsilon temporarily throughout training and raising initial epsilon. Introduce delayed memory/learning so actions in sequence can be learned off of.
+
+17/04/2025 - Day 5
+
+    Training underway. Ant still very stupid. Played around with some values such as introducing a minimum epsilon. Changed the environment to have only one ant per team to encourage it to learn from its own behaviours. Realised how inefficient the setup I had was and thinned down the state a little. Rebuild the state to be global states plus a 3x3 grid with channels for each locational state. Changed the ant model to accept this and put the grid through a CNN before joining it with the fc1'ed global variables into a combined network. In the process of adding an RNN, complications with hidden state and how the order of actions is interfered with by having multiple ants taking actions.
+
+    Overall, biggest challenge in training is trying to speed the convergence and make it more likely the ant will discover successful rewards and policies while also not biasing the experiment at all. I would like not to have to introduce rewards for actions such as picking up food, as that would be against the spirit of the simulation. Research other strategies to help, such as evolutionary simulations with fitness tests or competitive AI. Refer to chatGPT prompts from today lmao.
+
+    TODO:
+        Code currently VERY broken, so don't commit to github. Learn how to make github branches. Change code so hidden state order matches order of ants in some id list. Possibly append the ant object to a list every time it takes an action? Then search the hiddenstate arrays by the same index. Test this, then continue attempting to speed convergence. Research nuanced strategies to do this. Possibly fine-tune AI, but I believe the main issue is to do with the AI not experiencing the multi-step high rewards. Also, keep it at one ant per team so as not to falsely attribute value. Very interesting sim, but I have a headache so I'm going to gala night now. Cya!
+
+18/04/2025 - Day 6
+
+    Overview of Strategy:
+        Curriculum learning in the following order:
+            3x3 grid, one colony, one ant. Teach it to pick up and drop off food, and to not step off the map boundaries.
+
+            4x4 grid, one colony, one ant, reduceed food spawning. Teach the ant to search for food and get it used to having to pathfind to food, as last approach would likely have taught it to wait for food to be in neighbouring squares.
+
+            5x5 grid with 2 colonies next to each other. Teach ants to be aggressive in finding food. Make food sparse to encourage aggression.
+
+            Slowly widen grid and adjust epsilon and food values etc to suit.
+
+            Make all of these as separate gyms that get simulated.
+
+    Worked on issues that implementing RNN had created. After much, MUCH effort, finally succeeded. However, from what I can see, program runs much slower, even with only one ant per colony. Might have to update program in future to make it more efficient. As far as I can see, no significant performance difference, however I believe theoretically that the RNN and CNN have helped, something that hopefully will become apparent when I implement the curriculum learning gyms. Didn't upload to github as I'm not completely confident in the changes despite theoretical success.
+
+    TODO:
+        Implement gyms and curriculum learning. I think it's the best shot at getting a semi-trained ant without biasing the simulation. Also, remember the guys I posted on MEE6 and possibly email or get in contact? Primarily, work on gyms and debug anything that comes up due to RNN implementation. Also, though it doesn't matter now, when I start training a colony model as well, I will need to refactor the colony model and class to also have RNN and CNN implementation with it, depending on the reward function. However, colony might be simpler as its tasks are not multi-step and are less complicated, so complicating the model may not be necessary. Best approach is probably to refactor the agent etc to regain functionality, then only implement RNN and CNN if the model is very stupid. Also regularisation (I forget if it's l1 or l2) for the ant to emphasize the important state values eg food value.Anyway, I've got Mediterranean night now so cya!

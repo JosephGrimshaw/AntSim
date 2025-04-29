@@ -84,27 +84,30 @@ MAX_COL_FOOD_REWARD = 1000
 
 INITIAL_EPSILON = {
     "ant": 200,
-    "colony": 200
+    "colony": 200,
 }
 EPSILON_DECAY = {
     "ant": 1,
     "colony": 1
 }
 MIN_EPSILON = {
-    "ant": 50,
-    "colony": 50
+    "ant": 25,
+    "colony": 25
 }
 GAMMA = {
-    "ant": 0.9,
-    "colony": 0.9
+    "ant": 0.99,
+    "colony": 0.99
 }
 
-BATCH_SIZE = 100
+BATCH_SIZE = 50
 
-ANT_INPUT_SIZE = 82
+ANT_INPUT_GRID_CHANNELS = 8
+ANT_INPUT_GLOBAL_SIZE = 6
 ANT_OUTPUT_SIZE = 10 + ANT_PHEROMONES
-ANT_HIDDEN_LAYERS = 20
-ANT_HIDDEN_NEURONES = 128
+ANT_HIDDEN_LAYERS = 5
+ANT_HIDDEN_NEURONES = 64
+ANT_RNN_HIDDEN_LAYERS = 2
+ANT_RNN_HIDDEN_NEURONES = 64
 ANT_LR = 0.001
 
 COL_INPUT_SIZE = 71
@@ -115,3 +118,4 @@ COL_LR = 0.001
 
 TOTAL_EPOCHS = 10000
 SAVE_INTERVAL = 100
+MAX_ANTS = 1000

@@ -10,9 +10,10 @@ class Colony():
         self.pos = pos
         self.colour = colour
         self.agent = agent
-        self.antAgent = antAgent
         self.lastState = None
         self.lastAction = None
+        self.antAgent = antAgent
+        self.turns = 0
         self.ants = {"soldier": [],
                      "worker": []}
         self.larvae = {"soldier": [],
@@ -78,11 +79,12 @@ class Colony():
     
     def takeTurn(self, map, done):
         #newState = self.agent.getState(map, self)
-        #reward = self.agent.getReward(self)
+        #reward = self.agent.getReward(self, done)
         #if self.lastAction != None:
             #self.agent.trainTurn(self.lastState, self.allMoves.index(self.lastAction), reward, newState, done)
             #self.agent.record(self.lastState, self.allMoves.index(self.lastAction), reward, newState, done)
         #self.lastState = newState
+        self.turns += 1
         self.updateFoodStored(map[self.pos[0]][self.pos[1]])
         if self.hunger < c.COLONY_HP_DEGRADE_THRESHOLD_HUNGER:
             self.hp -= c.COLONY_HP_DEGRADE_HUNGER
@@ -104,13 +106,15 @@ class Colony():
         newObjs = self.handleLarvae()
         match newMove:
             case "makeWorker":
-                if self.hunger >= c.NEW_WORKER_COST:
-                    self.hunger -= c.NEW_WORKER_COST
-                    self.makeAnt("worker", 5)
+                if len(self.ants["soldier"] + self.ants["worker"] + self.larvae["soldier"] + self.larvae["worker"]) < c.MAX_ANTS:
+                    if self.hunger >= c.NEW_WORKER_COST:
+                        self.hunger -= c.NEW_WORKER_COST
+                        self.makeAnt("worker", 5)
             case "makeSoldier":
-                if self.hunger >= c.NEW_SOLDIER_COST:
-                    self.hunger -= c.NEW_SOLDIER_COST
-                    self.makeAnt("soldier", 10)
+                if len(self.ants["soldier"] + self.ants["worker"] + self.larvae["soldier"] + self.larvae["worker"]) < c.MAX_ANTS:
+                    if self.hunger >= c.NEW_SOLDIER_COST:
+                        self.hunger -= c.NEW_SOLDIER_COST
+                        self.makeAnt("soldier", 10)
             case "eat":
                 self.eat([entity for entity in map[self.pos[0]][self.pos[1]] if entity.type == "food"])
             case "skip":

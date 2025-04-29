@@ -4,22 +4,34 @@ import consts as c
 import food as f
 import pheromone as p
 import copy
+import agent as a
+import torch
 
 class Ant():
-    def __init__(self, img, pos, col, caste, foodImg, agent):
+    antCounter = 0
+    allAnts = []
+    def __init__(self, img, pos, col, caste, foodImg, antAgent):
+        Ant.allAnts.append(self)
         self.img = img
         self.pos = pos
         self.col = col
+        self.ant_id = Ant.antCounter
+        Ant.antCounter += 1
         self.foodImg = foodImg
+        self.hiddenState = (
+            torch.zeros(c.ANT_RNN_HIDDEN_LAYERS, 1, c.ANT_RNN_HIDDEN_NEURONES),
+            torch.zeros(c.ANT_RNN_HIDDEN_LAYERS, 1, c.ANT_RNN_HIDDEN_NEURONES)
+        )
         self.type = "ant"
         self.caste = caste
-        self.agent = agent
+        self.agent = antAgent
         self.lastHP = c.ANT_HP[caste]
         self.lastHunger = c.ANT_HUNGER
         self.lastState = None
         self.lastAction = None
         self.hunger = c.ANT_HUNGER
         self.heldFood = 0
+        self.turns = 0
         self.allMoves = ["left", "right", "up", "down", "pickUpFood", "eatFood", "dropFood", "attackAnt", "attackColony", "skip"]
         for i in range(c.ANT_PHEROMONES):
             self.allMoves.append(f"layPheromone{i}")
@@ -34,11 +46,12 @@ class Ant():
         WIN.blit(self.img, (ef.squareToPixel(self.pos[0]), ef.squareToPixel(self.pos[1])))
 
     def takeTurn(self, map, done):
+        self.turns += 1
         newState = self.agent.getState(map, self)
-        reward = self.agent.getReward(self)
+        reward = self.agent.getReward(self, done)
         if self.lastAction != None:
-            self.agent.trainTurn(self.lastState, self.allMoves.index(self.lastAction), reward, newState, done)
-            self.agent.record(self.lastState, self.allMoves.index(self.lastAction), reward, newState, done)
+            self.agent.trainTurn(self.lastState, self.allMoves.index(self.lastAction), reward, newState, done, self)
+            self.agent.record(self.lastState, self.allMoves.index(self.lastAction), reward, newState, done, self.hiddenState, self.ant_id)
         self.lastState = copy.deepcopy(newState)
         if self.hunger <= c.ANT_HP_DEGRADE_THRESHOLD_HUNGER:
             self.hp -= c.ANT_HP_DEGRADE_HUNGER
@@ -52,7 +65,7 @@ class Ant():
             #Delete self
             foodObj = f.Food(self.foodImg, c.DEAD_FOODS[self.caste], [self.pos[0], self.pos[1]])
             return True, [foodObj]
-        newMove = self.agent.getAction(newState, self)
+        newMove = self.agent.getAction(newState[0], newState[1], self)
         self.lastAction = newMove
         self.lastHP = self.hp
         self.lastHunger = self.hunger

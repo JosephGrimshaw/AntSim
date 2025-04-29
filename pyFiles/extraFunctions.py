@@ -50,10 +50,11 @@ def handleFood(map, changes, foodImg):
             x = random.randint(0, c.SQUARE_LENGTH-1)
             y = random.randint(0, c.SQUARE_LENGTH-1)
             makeNew = True
-            for entity in map[x][y]:
-                if entity.type == "food":
-                    entity.value += random.randint(c.MIN_FOOD_VALUE, c.MAX_FOOD_VALUE)
-                    makeNew = False
-            if makeNew:
-                changes["add"].append([f.Food(foodImg, random.randint(1, 100), (x, y)), [x,  y]])
+            if (x != c.RED_COLONY_X and y != c.RED_COLONY_Y) and (x != c.BLUE_COLONY_X and y != c.BLUE_COLONY_Y):
+                for entity in map[x][y]:
+                    if entity.type == "food":
+                        entity.value += random.randint(c.MIN_FOOD_VALUE, c.MAX_FOOD_VALUE)
+                        makeNew = False
+                if makeNew:
+                    changes["add"].append([f.Food(foodImg, random.randint(1, 100), (x, y)), [x,  y]])
     return changes
