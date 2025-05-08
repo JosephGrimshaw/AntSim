@@ -50,7 +50,7 @@ def getAntGridState(map, ant):
     12. TL Friendly Pheromone
     13. TL Enemy Pheromone
     '''
-    state = np.zeros((8, 3, 3))
+    state = np.zeros((8, 3, 3), dtype=np.float32)
     #DECIDE WHETHER TO INCLUDE ENEMY COLONY INFO
         #state.append(ant.col.enemy.pos[0]/c.SQUARE_LENGTH if ant.col.enemy else -1)
         #state.append(ant.col.enemy.pos[1]/c.SQUARE_LENGTH if ant.col.enemy else -1)
@@ -61,7 +61,7 @@ def getAntGridState(map, ant):
             stateY = y + 1
             mapX = ant.pos[0] + x
             mapY = ant.pos[1] + y
-            if x < 0 or x >= c.WIDTH or y < 0 or y >= c.HEIGHT:
+            if x < 0 or x >= c.SQUARE_LENGTH or y < 0 or y >= c.SQUARE_LENGTH:
                 state[6, stateX, stateY] = -1 #Friendly Pheromone
                 state[7, stateX, stateY] = -1 #Enemy Pheromone
             else:

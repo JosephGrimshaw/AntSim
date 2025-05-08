@@ -101,6 +101,8 @@ def main():
                 run = False
                 antAgent.trainGame(ant.Ant.allAnts)
                 #colAgent.trainGame()
+                antAgent.memory.clear()
+                #colAgent.memory.clear()
             
 
 
@@ -110,4 +112,5 @@ def main():
     antModel.save("./models/antModel.pt")
     #colModel.save("colModel.pt")
 
-cProfile.run('main()')
+#cProfile.run('main()')
+main()

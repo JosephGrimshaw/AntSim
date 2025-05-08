@@ -10,6 +10,7 @@ import torch
 class Ant():
     antCounter = 0
     allAnts = []
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     def __init__(self, img, pos, col, caste, foodImg, antAgent):
         Ant.allAnts.append(self)
         self.img = img
@@ -19,8 +20,8 @@ class Ant():
         Ant.antCounter += 1
         self.foodImg = foodImg
         self.hiddenState = (
-            torch.zeros(c.ANT_RNN_HIDDEN_LAYERS, 1, c.ANT_RNN_HIDDEN_NEURONES),
-            torch.zeros(c.ANT_RNN_HIDDEN_LAYERS, 1, c.ANT_RNN_HIDDEN_NEURONES)
+            torch.zeros(c.ANT_RNN_HIDDEN_LAYERS, 1, c.ANT_RNN_HIDDEN_NEURONES).to(Ant.device),
+            torch.zeros(c.ANT_RNN_HIDDEN_LAYERS, 1, c.ANT_RNN_HIDDEN_NEURONES).to(Ant.device)
         )
         self.type = "ant"
         self.caste = caste
@@ -51,7 +52,7 @@ class Ant():
         reward = self.agent.getReward(self, done)
         if self.lastAction != None:
             self.agent.trainTurn(self.lastState, self.allMoves.index(self.lastAction), reward, newState, done, self)
-            self.agent.record(self.lastState, self.allMoves.index(self.lastAction), reward, newState, done, self.hiddenState, self.ant_id)
+            self.agent.record(self.lastState, self.allMoves.index(self.lastAction), reward, newState, done, (self.hiddenState[0].detach(), self.hiddenState[1].detach()), self.ant_id)
         self.lastState = copy.deepcopy(newState)
         if self.hunger <= c.ANT_HP_DEGRADE_THRESHOLD_HUNGER:
             self.hp -= c.ANT_HP_DEGRADE_HUNGER

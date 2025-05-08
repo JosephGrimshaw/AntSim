@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import consts as c
+import numpy as np
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 #Ant model
@@ -107,7 +108,69 @@ class Trainer():
 
         return hiddenState
             
-    def train(self, antData):
+    def train(self, gridState, globalState, actions, rewards, nextGridStates, nextGlobalStates, dones, hiddenStatesH, hiddenStatesC):
+        gridState = torch.tensor(gridState).to(device)
+        globalState = torch.tensor(globalState, dtype=torch.float).to(device)
+        action = torch.tensor(actions, dtype=torch.long).to(device)
+        reward = torch.tensor(rewards, dtype=torch.float).to(device)
+        nextGridState = torch.tensor(nextGridStates, dtype=torch.float).to(device)
+        nextGlobalState = torch.tensor(nextGlobalStates, dtype=torch.float).to(device)
+        #hiddenStatesC = torch.tensor(hiddenStatesC, dtype=torch.float)
+        #hiddenStatesH = torch.tensor(hiddenStatesH, dtype=torch.float)
+        hiddenStates = (
+            hiddenStatesH.detach().to(device),
+            hiddenStatesC.detach().to(device)
+            )
+        #print(hiddenStates)
+        if len(globalState.shape) == 1:
+            dones = (dones, )
+            gridState = torch.unsqueeze(gridState, 0)
+            globalState = torch.unsqueeze(globalState, 0)
+            action = torch.unsqueeze(action, 0)
+            reward = torch.unsqueeze(reward, 0)
+            nextGridState = torch.unsqueeze(nextGridState, 0)
+            nextGlobalState = torch.unsqueeze(nextGlobalState, 0)
+            
+        if hiddenStates[0].dim() == 2:
+            hiddenStates = (
+                torch.unsqueeze(hiddenStates[0], 0),
+                torch.unsqueeze(hiddenStates[1], 0)
+            )
+        
+        done = torch.tensor(dones, dtype=torch.bool).to(device)
+        #print("Hidden Shape H: ", hiddenStates[0].shape)
+        #print("Hidden Shape C: ", hiddenStates[1].shape)
+        pred, hiddenStates = self.model(gridState, globalState, hiddenStates)
+        target = pred.clone().detach()
+        hiddenStates = (hiddenStates[0].detach(), hiddenStates[1].detach())
+        featuredIDXs = []
+        for i in range(done.size(dim=0)):
+            if done[i]:
+                target[i][action[i]] = reward[i]
+            else:
+                featuredIDXs.append(i)
+        notDoneMask = ~done
+        nextGridState = nextGridState[notDoneMask]
+        nextGlobalState = nextGlobalState[notDoneMask]
+        hiddenStates = (
+            hiddenStates[0][:, notDoneMask, :], #.unsqueeze(-2),
+            hiddenStates[1][:, notDoneMask, :] #.unsqueeze(-2)
+        )
+        newStates, _ = self.model(nextGridState, nextGlobalState, hiddenStates)
+        newStates = newStates.detach()
+        for stateIdx, i in enumerate(featuredIDXs):
+            #print(target.shape)
+            #print("New States: ", newStates.shape)
+            #print("New States[stateIdx]: ", newStates[stateIdx].shape)
+            #print("New States[stateIdx][0]: ", newStates[stateIdx][0].shape)
+            target[stateIdx][0][int(action[i])] = reward[i] + c.GAMMA[self.type] * torch.max(newStates[stateIdx][0]).item()
+        
+        self.optimizer.zero_grad()
+        loss = self.criterion(target, pred)
+        torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+        loss.backward()
+        self.optimizer.step()
+        '''
         newHiddenStates = {}
 
         for antID, samples in antData.items():
@@ -117,6 +180,8 @@ class Trainer():
             newHiddenStates[antID] = newHidden
         
         return newHiddenStates
+        '''
+
         '''
         gridState = torch.tensor(state[0], dtype=torch.float)
         globalState = torch.tensor(state[1], dtype=torch.float)
